@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(apache2_mod_proxy_grpc CXX)
 
 include(FetchContent)
+find_package (Git)
+find_package(PkgConfig REQUIRED)
 FetchContent_Declare(
   gRPC
   GIT_REPOSITORY https://github.com/grpc/grpc
@@ -28,7 +30,23 @@ macro(add_subdirectory)
 endmacro()
 FetchContent_MakeAvailable(gRPC)
 
-find_package(PkgConfig REQUIRED) 
+if (GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --tags --dirty=-d --long
+        OUTPUT_VARIABLE VERSION
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else (GIT_FOUND)
+      set(VERSION "v0.0.0-0-00000000-d")
+endif (GIT_FOUND)
+
+#parse the version information into pieces.
+string(REGEX REPLACE "^v([0-9]+)\\..*" "\\1" VERSION_MAJOR "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" VERSION_PATCH "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.[0-9]+\\.[0-9]+-([0-9]+).*" "\\1" VERSION_COMMIT "${VERSION}")
+string(REGEX REPLACE "^v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+-(.*)" "\\1" VERSION_SHA1 "${VERSION}")
+set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+
 pkg_check_modules(APR1 REQUIRED IMPORTED_TARGET apr-1)
 execute_process(
     COMMAND apxs -q INCLUDEDIR
@@ -79,3 +97,25 @@ add_custom_target(ab-bench
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS mod_proxy_grpc
 )
+
+set(CPACK_DEB_COMPONENT_INSTALL OFF)
+set(CPACK_PACKAGE_NAME "libapache2-mod-proxy-grpc")
+set(CPACK_PACKAGE_VENDOR "Dominik Thalhammer")
+set(CPACK_PACKAGE_CONTACT "dominik@thalhammer.it")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "grpc proxy module for Apache2")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Thalhammer/mod_proxy_grpc")
+set(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dominik Thalhammer <dominik@thalhammer.it>")
+set(CPACK_DEBIAN_PACKAGE_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(CPACK_DEBIAN_PACKAGE_RELEASE "${VERSION_COMMIT}")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "apache2-bin")
+
+if (UNIX)
+    set(CPACK_GENERATOR "DEB")
+endif (UNIX)
+
+include(CPack)
