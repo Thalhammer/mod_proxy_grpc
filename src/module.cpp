@@ -74,7 +74,7 @@ static int proxy_grpc_handler_post(request_rec *r, proxy_worker *worker, proxy_s
     proxy.set_call_timeout(std::max<int64_t>(cfg->call_timeout_ms, 0));
     if(!proxy.start(proxyname, url)) return HTTP_SERVICE_UNAVAILABLE;
     if(!proxy.send_initial_metadata(headers_in)) return HTTP_SERVICE_UNAVAILABLE;
-    if(!str.empty() && !proxy.send_request(str.data(), str.size())) return HTTP_SERVICE_UNAVAILABLE;
+    if(!proxy.send_request(str.data(), str.size())) return HTTP_SERVICE_UNAVAILABLE;
     if(!proxy.send_client_close()) return HTTP_SERVICE_UNAVAILABLE;
     std::unordered_multimap<std::string, std::string> headers_out;
     if(!proxy.receive_initial_metadata(headers_out)) return HTTP_SERVICE_UNAVAILABLE;
