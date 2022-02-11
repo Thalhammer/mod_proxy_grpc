@@ -66,6 +66,7 @@ target_include_directories(mod_proxy_grpc PRIVATE
 target_link_libraries(mod_proxy_grpc grpc++_unsecure PkgConfig::APR1)
 target_link_libraries(mod_proxy_grpc -static-libstdc++)
 set_target_properties(mod_proxy_grpc PROPERTIES PREFIX "")
+set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,--version-script=${CMAKE_SOURCE_DIR}/mod_proxy_grpc.version")
 
 install(
     TARGETS mod_proxy_grpc
@@ -73,7 +74,8 @@ install(
 )
 install(
     FILES mod_proxy_grpc.load
-    DESTINATION /etc/apache2/mods-available/proxy_grpc.load
+    DESTINATION /etc/apache2/mods-available/
+    RENAME proxy_grpc.load
 )
 
 add_custom_target(run-apache

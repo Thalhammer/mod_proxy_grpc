@@ -6,6 +6,7 @@ extern "C" {
 #include <string>
 #include <unordered_map>
 #include <algorithm>
+#include <base64.h>
 
 template<typename Func>
 size_t read_body(Func func, request_rec* r) {
@@ -92,6 +93,7 @@ inline int64_t detect_content_length(request_rec *r) {
 std::string read_body_base64(request_rec* r) {
     bool failed = false;
     std::string res;
+    base64_decode_stream stream;
     read_body([&](const char* data, size_t len) -> bool {
         for(size_t i = 0; i < len; i++) {
             if(data[i] >='A' && data[i] <= 'Z') continue;
@@ -102,15 +104,12 @@ std::string read_body_base64(request_rec* r) {
             failed = true;
             return false;
         }
-        res.append(data, len);
+        stream.feed(res, data, len);
         return true;
     }, r);
     if(failed) return "";
-    std::string decoded;
-    decoded.resize(res.size());
-    auto len = apr_base64_decode_binary((unsigned char*)decoded.data(), res.c_str());
-    decoded.resize(len);
-    return decoded;
+    stream.flush(res);
+    return res;
 }
 
 template<typename T>

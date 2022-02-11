@@ -1,0 +1,4 @@
+mod_proxy_grpc_1 {
+  global: proxy_grpc_module;
+  local: *;
+};
